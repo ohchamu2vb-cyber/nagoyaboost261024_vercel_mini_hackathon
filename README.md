@@ -1,56 +1,59 @@
-# sv
+# おみくじアプリ
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit (Svelte 5) 製のおみくじアプリ。Vercel に SSR でデプロイする前提の構成です。
 
-## Creating a project
+## 構成
 
-If you're seeing this, you've probably already done this step. Congrats!
+| パス | 役割 |
+| --- | --- |
+| `/` | おみくじを引くページ。form action `?/draw` でサーバー抽選 → 記録保存 |
+| `/history` | おみくじ記録の一覧ページ |
 
-```sh
-# create a new project
-npx sv create my-app
+- 抽選ロジックは [omikuji.ts](src/lib/server/omikuji.ts)（サーバー専用、重み付き抽選）
+- 記録の保存・取得は [omikuji-store.ts](src/lib/server/omikuji-store.ts)
+- ユーザー識別は [hooks.server.ts](src/hooks.server.ts) で Cookie による匿名 ID を発行
+
+## SSR について
+
+- `adapter-vercel`（`nodejs22.x`）を使用し、Vercel の Serverless Function 上で SSR します。
+- [+layout.server.ts](src/routes/+layout.server.ts) で `ssr = true` / `prerender = false` を明示。
+- 抽選も保存も `+page.server.ts` の form action 内で完結するため、クライアント JS が無効でも動作します。
+
+## Redis（Upstash）について
+
+**まだ Redis を確保していない状態でもそのまま動きます。**
+環境変数が未設定の場合は自動的にインメモリ保存へフォールバックし、
+`/history` にその旨のバナーを表示します（Serverless ではインスタンスをまたぐと消えます）。
+
+用意ができたら以下を設定するだけで永続化に切り替わります。
+
+```
+KV_REST_API_URL=...
+KV_REST_API_TOKEN=...
 ```
 
-To recreate this project with the same configuration:
+Vercel Marketplace から Upstash を連携すると `KV_REST_API_*` が自動注入されます。
+Upstash コンソールから直接コピーする場合は `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` でも可。
 
-```sh
-# recreate this project
-npx sv@1.1.1 create --template minimal --no-types --install npm myapp
-```
+### キー設計
 
-## Adding features
+- キー: `omikuji:history:<userId>`（Redis List）
+- 書き込み: `LPUSH` → `LTRIM 0 (LIMIT-1)` で新しい順に最大 `OMIKUJI_HISTORY_LIMIT` 件（既定 50）
+- 読み出し: `LRANGE 0 LIMIT-1`
+- REST ベースの `@upstash/redis` を使用しているため、Serverless / Edge どちらでも接続を持ち越さずに済みます。
 
-Add features to your project with `sv add`:
+## 開発
 
-```sh
-npx sv add
-```
-
-For example, to add Tailwind CSS:
-
-```sh
-npx sv add tailwindcss
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+```bash
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## デプロイ
 
-To create a production version of your app:
-
-```sh
-npm run build
+```bash
+npm i -g vercel
+vercel
 ```
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+Framework Preset は自動で SvelteKit が選択されます。環境変数は Vercel の Project Settings に登録してください。
