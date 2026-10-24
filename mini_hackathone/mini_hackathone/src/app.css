@@ -1,0 +1,27 @@
+:root {
+	font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', system-ui, sans-serif;
+	color-scheme: dark;
+	--bg: #11121d;
+	--surface: #1a1b2a;
+	--fg: #f1ede4;
+	--muted: #a6a3ae;
+	--line: #333342;
+	--gold: #d0b36b;
+	--accent: #c3a552;
+	color: var(--fg);
+	background: var(--bg);
+}
+
+* { box-sizing: border-box; }
+body {
+	margin: 0;
+	min-width: 320px;
+	min-height: 100vh;
+	background: radial-gradient(ellipse at 50% 12%, #24233a 0, var(--bg) 48rem);
+	color: var(--fg);
+	font-family: 'Hiragino Kaku Gothic ProN', 'Yu Gothic', system-ui, sans-serif;
+	line-height: 1.7;
+}
+button, a { -webkit-tap-highlight-color: transparent; }
+a { color: var(--gold); }
+::selection { background: #c3a55255; }
